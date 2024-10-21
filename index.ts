@@ -1,7 +1,5 @@
 import PuppeteerControl from "./src/browser";
 
+const browser = await PuppeteerControl.PuppetFactory();
 
-console.log(
-  await new PuppeteerControl().fetchResponse(
-    "https://pptr.dev/api/puppeteer.page.setbypasscsp"  )
-);
+console.log(await browser.fetchResponse("https://climateprimer.mit.edu/"));
