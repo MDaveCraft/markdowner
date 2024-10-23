@@ -1,26 +1,15 @@
 import puppeteer, { Browser, Page } from "puppeteer";
-import type { Env, DurableObject } from "./interfaces";
-import { convertMultiLineLinksToSingleLine, updateRelativeMarkdownLinks } from "./utils";
-const KEEP_BROWSER_ALIVE_IN_SECONDS = 60;
-const TEN_SECONDS = 10000;
+import Marker from "./Marker";
+
 
 declare const Readability: any;
 declare const TurndownService: any;
-declare const turndownPluginGfm:any;
+declare const turndownPluginGfm: any;
 
 export default class PuppeteerControl {
-  keptAliveInSeconds: number = 0;
-  env: Env | undefined;
-  storage: DurableObject | undefined;
+  
   request: Request | undefined;
   browser: Browser | null = null;
-  token: string = "";
-  llmFiltering: boolean = false;
-
-  private constructor(env: Env | undefined = undefined, storage: DurableObject | undefined = undefined) {
-    this.env = env;
-    this.storage = storage;
-  }
 
   static PuppetFactory = async () => {
     const browser = new PuppeteerControl();
@@ -28,7 +17,7 @@ export default class PuppeteerControl {
     return browser;
   };
 
-  private async initBrowser(){
+  private async initBrowser() {
     try {
       !this.browser || !this.browser.connected
         ? (this.browser = await puppeteer.launch())
@@ -48,8 +37,11 @@ export default class PuppeteerControl {
     );
   }
 
-  async fetchResponse(url: string, enabledDetailedResponse: boolean = true): Promise<string | null> {
-    if(!this.browser) return null;
+  async fetch(
+    url: string,
+    enabledDetailedResponse: boolean = true
+  ): Promise<string | null> {
+    if (!this.browser) return null;
     const page = await this.browser.newPage();
     await page.setBypassCSP(true);
     await page.setViewport({ width: 1920, height: 1080 });
@@ -75,16 +67,21 @@ export default class PuppeteerControl {
           });
 
         function removeBrowserItems(): Document {
-          const unnecessaryTags = ["script", "style", "noscript", "iframe","br"];
+          const unnecessaryTags = [
+            "script",
+            "style",
+            "noscript",
+            "iframe",
+            "br",
+          ];
           let filteredDocument = document.cloneNode(true) as Document;
-          unnecessaryTags.map(tag =>
+          unnecessaryTags.map((tag) =>
             filteredDocument
               .querySelectorAll(tag)
-              .forEach(tag => tag.remove())
+              .forEach((tag) => tag.remove())
           );
           return filteredDocument;
         }
-        
         let pageContent: string | Document;
         await loadScript(scripts.turndownJs);
         await loadScript(scripts.turndownGFM);
@@ -100,6 +97,28 @@ export default class PuppeteerControl {
         }
         const turndownService = new TurndownService();
         turndownService.use(turndownPluginGfm.gfm);
+
+        turndownService.addRule("table", {
+          filter: "table",
+          replacement: (_content: any, node: any) => {
+            const headers = Array.from(node.querySelectorAll("th"))
+              .map((th: any) => th.textContent.trim());
+
+            const rows = Array.from(node.querySelectorAll("tr"))
+              .map((tr: any) => Array.from(tr.querySelectorAll("td"))
+                .map((td: any) => td.textContent.trim()));
+
+            let markdownTable = `| ${headers.join(" | ")} |\n`;
+            markdownTable += `| ${headers.map(() => "---").join(" | ")} |\n`;
+
+            rows.forEach((row) => {
+              if (row.length) markdownTable += `| ${row.join(" | ")} |\n`;
+            });
+
+            return markdownTable;
+          },
+        });
+
         const markdown = turndownService.turndown(pageContent);
         return markdown;
       },
@@ -107,26 +126,27 @@ export default class PuppeteerControl {
     );
     await page.close();
     await this.browser.close();
-    md = await this.refineDown(md,url);
+    // md = await this.refineDown(md, url);
     return md;
   }
 
-  async refineDown(md:string,url:string) {
-    md = await convertMultiLineLinksToSingleLine(md);
-    md = await updateRelativeMarkdownLinks(md,url);
+  async refineDown(md: string, url: string) {
+    md = Marker.lineBreakToSpace(md);
+    md = Marker.convertMultiLineLinksToSingleLine(md);
+    md = await Marker.updateRelativeMarkdownLinks(md, url);
     return md;
   }
 
-  private async alarm() {
-    this.keptAliveInSeconds += 10;
-    if (this.keptAliveInSeconds < KEEP_BROWSER_ALIVE_IN_SECONDS) {
-      if(this.storage)
-      await this.storage.setAlarm(Date.now() + TEN_SECONDS);
-    } else {
-      if (this.browser) {
-        await this.browser.close();
-        this.browser = null;
-      }
-    }
-  }
+  // private async alarm() {
+  //   this.keptAliveInSeconds += 10;
+  //   if (this.keptAliveInSeconds < KEEP_BROWSER_ALIVE_IN_SECONDS) {
+  //     if(this.storage)
+  //     await this.storage.setAlarm(Date.now() + TEN_SECONDS);
+  //   } else {
+  //     if (this.browser) {
+  //       await this.browser.close();
+  //       this.browser = null;
+  //     }
+  //   }
+  // }
 }
