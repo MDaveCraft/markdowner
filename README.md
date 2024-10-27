@@ -1,15 +1,20 @@
-# markdowner
+# Markdowner
 
-To install dependencies:
+## Why?
+
+A fast and simple tool to convert any website into LLM-ready markdown data.
+
+## Features
+
+- Convert any website into markdown data
+- LLM Filtering (upcoming)
+- Auto-crawl (upcoming)
+- Easy to deploy
+- Detailed and Article Mode
+
+
+## Usage
 
 ```bash
-bun install
+bun start
 ```
-
-To run:
-
-```bash
-bun run index.ts
-```
-
-This project was created using `bun init` in bun v1.1.27. [Bun](https://bun.sh) is a fast all-in-one JavaScript runtime.
