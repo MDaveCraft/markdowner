@@ -1,5 +1,5 @@
 export interface Env {
-  BACKEND_SECURITY_TOKEN:string
+
 }
 
 export interface DurableObject {
@@ -9,4 +9,8 @@ export interface DurableObject {
 export interface ReturnVal<T> {
   error?: string;
   data?: T;
+}
+
+export interface IDisposable {
+  dispose(): void;
 }

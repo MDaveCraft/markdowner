@@ -1,13 +1,11 @@
 import puppeteer, { Browser, Page } from "puppeteer";
 import Marker from "./Marker";
 
-
 declare const Readability: any;
 declare const TurndownService: any;
 declare const turndownPluginGfm: any;
 
 export default class PuppeteerControl {
-  
   request: Request | undefined;
   browser: Browser | null = null;
 
@@ -19,9 +17,8 @@ export default class PuppeteerControl {
 
   private async initBrowser() {
     try {
-      !this.browser || !this.browser.connected
-        ? (this.browser = await puppeteer.launch())
-        : null;
+      if (!this.browser || !this.browser.connected)
+        this.browser = await puppeteer.launch();
     } catch (error) {
       console.error(error);
     }
@@ -39,8 +36,9 @@ export default class PuppeteerControl {
 
   async fetch(
     url: string,
-    enabledDetailedResponse: boolean = true
+    enabledDetailedResponse: boolean = false
   ): Promise<string | null> {
+    
     if (!this.browser) return null;
     const page = await this.browser.newPage();
     await page.setBypassCSP(true);
@@ -58,11 +56,12 @@ export default class PuppeteerControl {
         } as const;
 
         const loadScript = (url: string) =>
-          new Promise((resolve, reject) => {
+          new Promise<void>((resolve, reject) => {
             const script = document.createElement("script");
             script.src = url;
-            script.onload = resolve;
-            script.onerror = reject;
+            script.onload = () => resolve();
+            script.onerror = () =>
+              reject(new Error(`Failed to load script: ${url}`));
             document.head.appendChild(script);
           });
 
@@ -74,17 +73,16 @@ export default class PuppeteerControl {
             "iframe",
             "br",
           ];
-          let filteredDocument = document.cloneNode(true) as Document;
-          unnecessaryTags.map((tag) =>
-            filteredDocument
-              .querySelectorAll(tag)
-              .forEach((tag) => tag.remove())
-          );
+          const filteredDocument = document.cloneNode(true) as Document;
+          filteredDocument
+            .querySelectorAll(unnecessaryTags.join(","))
+            .forEach((tag) => tag.remove());
           return filteredDocument;
         }
         let pageContent: string | Document;
         await loadScript(scripts.turndownJs);
         await loadScript(scripts.turndownGFM);
+
         if (enabledDetailedResponse) pageContent = removeBrowserItems();
         else {
           await loadScript(scripts.readabilityJs);
@@ -95,23 +93,28 @@ export default class PuppeteerControl {
           });
           pageContent = reader.parse().content;
         }
+
         const turndownService = new TurndownService();
         turndownService.use(turndownPluginGfm.gfm);
 
         turndownService.addRule("table", {
           filter: "table",
           replacement: (_content: any, node: any) => {
-            const headers = Array.from(node.querySelectorAll("th"))
-              .map((th: any) => th.textContent.trim());
+            const headers = Array.from(node.querySelectorAll("th")).map(
+              (th: any) => th.textContent.trim()
+            );
 
-            const rows = Array.from(node.querySelectorAll("tr"))
-              .map((tr: any) => Array.from(tr.querySelectorAll("td"))
-                .map((td: any) => td.textContent.trim()));
+            const rows = Array.from(node.querySelectorAll("tr")).map(
+              (tr: any) =>
+                Array.from(tr.querySelectorAll("td")).map((td: any) =>
+                  td.textContent.trim()
+                )
+            );
 
             let markdownTable = `| ${headers.join(" | ")} |\n`;
             markdownTable += `| ${headers.map(() => "---").join(" | ")} |\n`;
 
-            rows.forEach((row) => {
+            rows.forEach(row => {
               if (row.length) markdownTable += `| ${row.join(" | ")} |\n`;
             });
 
@@ -126,7 +129,8 @@ export default class PuppeteerControl {
     );
     await page.close();
     await this.browser.close();
-    // md = await this.refineDown(md, url);
+    if(!enabledDetailedResponse)
+    md = await this.refineDown(md, url);
     return md;
   }
 
@@ -136,6 +140,32 @@ export default class PuppeteerControl {
     md = await Marker.updateRelativeMarkdownLinks(md, url);
     return md;
   }
+
+  // static async newPage(browser: Browser, url: string) {
+  //   if (!browser) {
+  //     console.error("Browser instance is not provided.");
+  //     return  ;
+  //   }
+  
+  //   try {
+  //     const page = await browser.newPage();
+  //     await page.setBypassCSP(true);
+  //     await page.setViewport({ width: 1920, height: 1080 });
+  //     await page.goto(url, { waitUntil: "networkidle0" });
+  
+  //     return {
+  //       page,
+  //       [Symbol.dispose]: async () => {
+  //         if (!page.isClosed()) {
+  //           await page.close();
+  //         }
+  //       },
+  //     };
+  //   } catch (error) {
+  //     console.error("Failed to create a new page:", error);
+  //     return null;
+  //   }
+  // }
 
   // private async alarm() {
   //   this.keptAliveInSeconds += 10;
