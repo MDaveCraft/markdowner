@@ -9,4 +9,3 @@ export function buildResponse(html:string):Response {
 }
 
 export const isValidUrl = (url: string): boolean => regexPattern.url.test(url);
-

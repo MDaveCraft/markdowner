@@ -1,6 +1,4 @@
-export interface Env {
-
-}
+export interface Env { }
 
 export interface DurableObject {
   setAlarm(timeout: number):Promise<void>;
@@ -11,6 +9,10 @@ export interface ReturnVal<T> {
   data?: T;
 }
 
-export interface IDisposable {
-  dispose(): void;
+export interface IDisposable{
+  dispose():void;
+}
+
+export interface IAsyncDisposable{
+  disposeAsync():Promise<void>;
 }

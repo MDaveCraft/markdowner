@@ -40,7 +40,10 @@ export default class Marker {
     return turndownService.turndown(pageContent);
   }
 
-  private static refiner(_md: string) {}
+  static async refineDown(md: string, baseURL: string):Promise<string> {
+    md = await Marker.updateRelativeMarkdownLinks(md, baseURL);
+    return md;
+  }
 
   static async updateRelativeMarkdownLinks(md: string, baseUrl: string) {
     const regex = /\[(.*?)\]\((\/[^\)]+)\)/g;
@@ -73,12 +76,10 @@ export default class Marker {
   static table(md: string) {
     const regex = /\|(.+?)\|/g;
     const rows = md.split("\n").filter((line) => regex.test(line));
-    const table = rows
-      .map((row) => {
-        const cells = row.split("|").map((cell) => cell.trim());
-        return `<tr>${cells.map((cell) => `<td>${cell}</td>`).join("")}</tr>`;
-      })
-      .join("");
+    const table = rows.map(row => {
+      const cells = row.split("|").map(cell => cell.trim());
+      return `<tr>${cells.map(cell => `<td>${cell}</td>`).join("")}</tr>`;
+    }).join('');
     return `<table>${table}</table>`;
   }
 }
