@@ -86,6 +86,5 @@ export default async function fetchResponse(
       },
       enabledDetailedResponse
     );
-    await page.close();
     return md;
   }

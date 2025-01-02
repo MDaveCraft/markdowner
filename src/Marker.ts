@@ -4,22 +4,21 @@ var turndownService = new TurndownService();
 turndownService.use(require("turndown-plugin-gfm").gfm);
 turndownService.addRule("table", {
   filter: "table",
-  replacement: (_content: any, node: any) => {
-    const headers = Array.from(node.querySelectorAll("th")).map((th: any) =>
-      th.textContent.trim()
+  replacement: (_content: string, node: HTMLTableElement) => {
+    
+    const headers = Array.from(node.querySelectorAll("th")).map(th =>
+      th.textContent?.trim() || ""
     );
 
-    const rows = Array.from(node.querySelectorAll("tr")).map((tr: any) =>
-      Array.from(tr.querySelectorAll("td")).map((td: any) =>
-        td.textContent.trim()
-      )
+    const rows = Array.from(node.querySelectorAll("tr")).map(tr  =>
+      Array.from(tr.querySelectorAll("td")).map(td => td.textContent?.trim() || "")
     );
 
-    let markdownTable = `| ${headers.join(" | ")} |\n`;
-    markdownTable += `| ${headers.map(() => "---").join(" | ")} |\n`;
-    rows.forEach((row) => {
-      if (row.length) markdownTable += `| ${row.join(" | ")} |\n`;
-    });
+    let markdownTable = `| ${headers.join(" | ")} |\n` + 
+      `| ${headers.map(() => "---").join(" | ")} |\n`;
+      rows.forEach(row => {
+        if (row.length) markdownTable += `| ${row.join(" | ")} |\n`;
+      });
 
     return markdownTable;
   },
@@ -36,7 +35,7 @@ export default class Marker {
   }
 
   static toMarkdown(pageContent: Document | string, readability: boolean = false):string {
-    if(readability) Marker.addReadability(pageContent);
+    if(readability) pageContent = Marker.addReadability(pageContent);
     return turndownService.turndown(pageContent);
   }
 

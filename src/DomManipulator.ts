@@ -1,4 +1,4 @@
-export class DomManipulator {
+export default class DomManipulator {
 
   static removeBrowserItems(doc: Document): Document {
     const unnecessaryTags = ["script", "style", "noscript", "iframe", "br"];
