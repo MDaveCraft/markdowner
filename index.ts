@@ -1,4 +1,4 @@
-import PuppeteerControl from "./src/browser";
+import PuppeteerControl from "./src/Browser";
 
 const browser = await PuppeteerControl.PuppetFactory();
 
